@@ -169,8 +169,7 @@ const generateBodyContent = (data) => {
 // --- 2. LE TEMPLATE HEADER (En-tête fixe) ---
 const getHeaderTemplate = (data, logoBase64) => {
   const formatDate = (d) => new Date(d).toLocaleDateString('fr-FR');
-  // Si pas de logo, on affiche juste le nom de l'entreprise
-  const logoHtml =ybBase64
+  const logoHtml = logoBase64
     ? `<img src="${logoBase64}" style="max-height: 55px; max-width: 200px; object-fit: contain;" />`
     : `<h1 style="color:#3b82f6; margin:0; font-size:22px;">${data.user_entreprise || 'Mon Entreprise'}</h1>`;
 
@@ -246,7 +245,6 @@ app.post('/generate-pdf', async (req, res) => {
     console.log('📲 Nouvelle demande de PDF reçue...');
     const data = req.body;
 
-    // Récupération du logo (si existant)
     let logoBase64 = null;
     if (data.user_logo) {
       logoBase64 = await fetchImageAsBase64(data.user_logo);
@@ -258,17 +256,20 @@ app.post('/generate-pdf', async (req, res) => {
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage', // Évite les crashs mémoire sur Docker/Render
-        '--single-process' // Parfois nécessaire sur les petits serveurs gratuits
+        '--disable-dev-shm-usage', // Évite les crashs mémoire
+        '--single-process'
       ]
     });
 
     const page = await browser.newPage();
     
-    // On injecte le HTML principal
-    await page.setContent(generateBodyContent(data), { waitUntil: 'networkidle0' });
+    // On injecte le HTML avec un TIMEOUT AUGMENTÉ (2 minutes)
+    await page.setContent(generateBodyContent(data), { 
+        waitUntil: 'networkidle0',
+        timeout: 120000 // <--- C'EST ICI QUE ÇA RÈGLE TON PROBLÈME DE TIMEOUT
+    });
 
-    // Génération du PDF avec marges et templates
+    // Génération du PDF avec marges, templates et TIMEOUT AUGMENTÉ
     const pdfBuffer = await page.pdf({
       format: 'A4',
       printBackground: true,
@@ -276,19 +277,20 @@ app.post('/generate-pdf', async (req, res) => {
       headerTemplate: getHeaderTemplate(data, logoBase64),
       footerTemplate: getFooterTemplate(data),
       margin: {
-        top: '50mm',    // Marge haute augmentée pour éviter le chevauchement
+        top: '50mm',    // Marge OK
         bottom: '20mm',
         left: '15mm',
         right: '15mm'
-      }
+      },
+      timeout: 120000   // <--- ET ICI AUSSI
     });
     
     await browser.close();
     console.log('✅ PDF généré avec succès et envoyé !');
     
-    res.set({
-      'Content-Type': 'application/pdf',
-      'Content-Length': pdfBuffer.length
+    res.set({ 
+      'Content-Type': 'application/pdf', 
+      'Content-Length': pdfBuffer.length 
     });
     res.send(pdfBuffer);
 
