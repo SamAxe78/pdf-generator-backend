@@ -170,9 +170,9 @@ const generateBodyContent = (data) => {
 const getHeaderTemplate = (data, logoBase64) => {
   const formatDate = (d) => new Date(d).toLocaleDateString('fr-FR');
   
-  // CORRECTION ICI : "logoBase64" au lieu de "ybBase64"
+  // MODIFICATION ICI : Hauteur forcée à 2cm et largeur max augmentée
   const logoHtml = logoBase64
-    ? `<img src="${logoBase64}" style="max-height: 55px; max-width: 200px; object-fit: contain;" />`
+    ? `<img src="${logoBase64}" style="height: 2cm; max-width: 300px; object-fit: contain;" />`
     : `<h1 style="color:#3b82f6; margin:0; font-size:22px;">${data.user_entreprise || 'Mon Entreprise'}</h1>`;
 
   return `
@@ -258,19 +258,20 @@ app.post('/generate-pdf', async (req, res) => {
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage', // Évite les crashs mémoire
+        '--disable-dev-shm-usage',
         '--single-process'
       ]
     });
 
     const page = await browser.newPage();
     
-      await page.setContent(generateBodyContent(data), {
-              waitUntil: 'load',
-              timeout: 120000
-          });
+    // Correction précédente : On utilise 'load' pour éviter le blocage
+    await page.setContent(generateBodyContent(data), { 
+        waitUntil: 'load',
+        timeout: 120000 
+    });
 
-    // Génération du PDF avec marges, templates et TIMEOUT AUGMENTÉ
+    // Génération du PDF
     const pdfBuffer = await page.pdf({
       format: 'A4',
       printBackground: true,
@@ -278,20 +279,20 @@ app.post('/generate-pdf', async (req, res) => {
       headerTemplate: getHeaderTemplate(data, logoBase64),
       footerTemplate: getFooterTemplate(data),
       margin: {
-        top: '50mm',    // Marge OK
+        top: '50mm',    // Marge OK pour logo 2cm
         bottom: '20mm',
         left: '15mm',
         right: '15mm'
       },
-      timeout: 120000
+      timeout: 120000   
     });
     
     await browser.close();
     console.log('✅ PDF généré avec succès et envoyé !');
     
-    res.set({
-      'Content-Type': 'application/pdf',
-      'Content-Length': pdfBuffer.length
+    res.set({ 
+      'Content-Type': 'application/pdf', 
+      'Content-Length': pdfBuffer.length 
     });
     res.send(pdfBuffer);
 
