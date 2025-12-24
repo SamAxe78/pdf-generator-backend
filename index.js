@@ -169,6 +169,8 @@ const generateBodyContent = (data) => {
 // --- 2. LE TEMPLATE HEADER (En-tête fixe) ---
 const getHeaderTemplate = (data, logoBase64) => {
   const formatDate = (d) => new Date(d).toLocaleDateString('fr-FR');
+  
+  // CORRECTION ICI : "logoBase64" au lieu de "ybBase64"
   const logoHtml = logoBase64
     ? `<img src="${logoBase64}" style="max-height: 55px; max-width: 200px; object-fit: contain;" />`
     : `<h1 style="color:#3b82f6; margin:0; font-size:22px;">${data.user_entreprise || 'Mon Entreprise'}</h1>`;
@@ -266,7 +268,7 @@ app.post('/generate-pdf', async (req, res) => {
     // On injecte le HTML avec un TIMEOUT AUGMENTÉ (2 minutes)
     await page.setContent(generateBodyContent(data), { 
         waitUntil: 'networkidle0',
-        timeout: 120000 // <--- C'EST ICI QUE ÇA RÈGLE TON PROBLÈME DE TIMEOUT
+        timeout: 120000 
     });
 
     // Génération du PDF avec marges, templates et TIMEOUT AUGMENTÉ
@@ -282,7 +284,7 @@ app.post('/generate-pdf', async (req, res) => {
         left: '15mm',
         right: '15mm'
       },
-      timeout: 120000   // <--- ET ICI AUSSI
+      timeout: 120000   
     });
     
     await browser.close();
