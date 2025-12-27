@@ -51,7 +51,7 @@ const generateBodyContent = (data) => {
       :root { --primary: #3b82f6; --light-bg: #f8fafc; }
 
       /* BOITE CLIENT */
-      .client-section { display: flex; justify-content: flex-end; margin-bottom: 30px; }
+      .client-section { display: flex; justify-content: flex-end; margin-bottom: 40px; }
       .client-box { 
         width: 45%; 
         background: var(--light-bg); 
@@ -63,14 +63,8 @@ const generateBodyContent = (data) => {
       .client-name { font-weight: bold; font-size: 13px; margin-bottom: 3px; color: #1e3a8a; }
       .client-details { font-size: 11px; line-height: 1.4; color: #444; }
 
-      /* OBJET */
-      .object-title {
-        font-weight: bold; margin-bottom: 20px; color: #1e3a8a; font-size: 13px; 
-        border-bottom: 2px solid var(--primary); padding-bottom: 5px;
-      }
-
       /* TABLEAU */
-      table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+      table { width: 100%; border-collapse: collapse; margin-bottom: 30px; margin-top: 20px; }
       th { 
         background: var(--primary); 
         color: white; 
@@ -83,7 +77,10 @@ const generateBodyContent = (data) => {
       td { padding: 12px 10px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
       tr:nth-child(even) td { background-color: #f9fafb; } 
       
-      .col-qty { text-align: center; width: 10%; }
+      /* Colonnes ajustées pour inclure l'unité */
+      .col-desc { width: 45%; }
+      .col-unit { width: 10%; text-align: center; }
+      .col-qty { width: 10%; text-align: center; }
       .col-price { text-align: right; width: 15%; }
       .col-total { text-align: right; width: 20%; font-weight: bold; }
 
@@ -120,15 +117,11 @@ const generateBodyContent = (data) => {
       </div>
     </div>
 
-    <div class="object-title">
-      Objet : ${data.prestations?.[0]?.libelle?.split('\n')[0] || 'Prestation'}
-    </div>
-
     <table>
       <thead>
         <tr>
-          <th width="55%">Description</th>
-          <th class="col-qty">Qté</th>
+          <th class="col-desc">Description</th>
+          <th class="col-unit">Unité</th> <th class="col-qty">Qté</th>
           <th class="col-price">Prix U. HT</th>
           <th class="col-total">Total HT</th>
         </tr>
@@ -140,7 +133,7 @@ const generateBodyContent = (data) => {
               <div style="font-weight:bold; color:#333;">${p.libelle.split('\n')[0]}</div>
               <div style="font-size:10px; color:#666; margin-top:2px;">${p.libelle.split('\n').slice(1).join('<br>')}</div>
             </td>
-            <td class="col-qty">${p.quantite}</td>
+            <td class="col-unit">${p.unite || '-'}</td> <td class="col-qty">${p.quantite}</td>
             <td class="col-price">${formatPrice(p.prix_unitaire)}</td>
             <td class="col-total">${formatPrice(p.total_ht)}</td>
           </tr>
@@ -170,7 +163,6 @@ const generateBodyContent = (data) => {
 const getHeaderTemplate = (data, logoBase64) => {
   const formatDate = (d) => new Date(d).toLocaleDateString('fr-FR');
   
-  // MODIFICATION ICI : Hauteur forcée à 2cm et largeur max augmentée
   const logoHtml = logoBase64
     ? `<img src="${logoBase64}" style="height: 2cm; max-width: 300px; object-fit: contain;" />`
     : `<h1 style="color:#3b82f6; margin:0; font-size:22px;">${data.user_entreprise || 'Mon Entreprise'}</h1>`;
@@ -265,7 +257,7 @@ app.post('/generate-pdf', async (req, res) => {
 
     const page = await browser.newPage();
     
-    // Correction précédente : On utilise 'load' pour éviter le blocage
+    // On utilise 'load' pour éviter le blocage
     await page.setContent(generateBodyContent(data), { 
         waitUntil: 'load',
         timeout: 120000 
@@ -279,7 +271,7 @@ app.post('/generate-pdf', async (req, res) => {
       headerTemplate: getHeaderTemplate(data, logoBase64),
       footerTemplate: getFooterTemplate(data),
       margin: {
-        top: '50mm',    // Marge OK pour logo 2cm
+        top: '50mm',
         bottom: '20mm',
         left: '15mm',
         right: '15mm'
