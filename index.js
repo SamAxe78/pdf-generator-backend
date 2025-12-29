@@ -9,6 +9,11 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(bodyParser.json({ limit: '50mb' }));
 
+// Route d'accueil pour vérifier que le serveur tourne
+app.get('/', (req, res) => {
+  res.send('✅ Serveur PDF BatiProAI en ligne !');
+});
+
 async function fetchImageAsBase64(url) {
   if (!url) return null;
   try {
@@ -34,10 +39,9 @@ const generateBodyContent = (data) => {
   <head>
     <style>
       body { margin: 0; padding: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 11px; color: #333; -webkit-print-color-adjust: exact; padding-top: 10px; }
-      
       :root { --primary: #3b82f6; --light-bg: #f8fafc; }
-
-      /* Si papier entête personnalisé, on descend un peu plus le contenu */
+      
+      /* Si papier entête, on pousse le contenu vers le bas */
       ${data.papier_entete ? 'body { padding-top: 20px; }' : ''}
 
       .client-section { display: flex; justify-content: flex-end; margin-bottom: 40px; }
@@ -64,7 +68,6 @@ const generateBodyContent = (data) => {
     </style>
   </head>
   <body>
-    
     <div class="client-section">
       <div class="client-box">
         <div class="client-label">ADRESSÉ À :</div>
@@ -124,7 +127,8 @@ const generateBodyContent = (data) => {
 const getHeaderTemplate = (data, logoBase64, headerBase64) => {
   const formatDate = (d) => new Date(d).toLocaleDateString('fr-FR');
   
-  // --- CAS 1 : Papier entête personnalisé ---
+  // --- CAS 1 : PAPIER ENTÊTE PRÉSENT ---
+  // C'est ici que ça se joue ! Si headerBase64 existe, on met l'image et on cache le reste.
   if (headerBase64) {
     return `
       <style>
@@ -161,7 +165,7 @@ const getHeaderTemplate = (data, logoBase64, headerBase64) => {
     `;
   }
 
-  // --- CAS 2 : Standard (Logo + Texte) ---
+  // --- CAS 2 : STANDARD ---
   const logoHtml = logoBase64
     ? `<img src="${logoBase64}" style="height: 2cm; max-width: 300px; object-fit: contain;" />`
     : `<h1 style="color:#3b82f6; margin:0; font-size:22px;">${data.user_entreprise || 'Mon Entreprise'}</h1>`;
@@ -193,14 +197,11 @@ const getHeaderTemplate = (data, logoBase64, headerBase64) => {
   `;
 };
 
-// 3. FOOTER TEMPLATE (Pied de page)
+// 3. FOOTER TEMPLATE
 const getFooterTemplate = (data, headerBase64) => {
-  // SI PAPIER ENTÊTE PRÉSENT : On ne met PAS de pied de page texte (car déjà sur l'image)
   if (headerBase64) {
     return `<div style="width: 100%; font-size: 8px; text-align: center; color: #999;">Page <span class="pageNumber"></span>/<span class="totalPages"></span></div>`;
   }
-
-  // SINON : Pied de page standard
   return `
     <style>
       .footer-container { width: 100%; font-size: 8px; text-align: center; color: #94a3b8; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; border-top: 1px solid #e5e7eb; padding-top: 8px; margin: 0 15mm; -webkit-print-color-adjust: exact; }
@@ -212,7 +213,6 @@ const getFooterTemplate = (data, headerBase64) => {
   `;
 };
 
-// --- ROUTE API ---
 app.post('/generate-pdf', async (req, res) => {
   try {
     console.log('📲 Nouvelle demande PDF...');
@@ -221,9 +221,12 @@ app.post('/generate-pdf', async (req, res) => {
     let logoBase64 = null;
     if (data.user_logo) { logoBase64 = await fetchImageAsBase64(data.user_logo); }
 
-    // On récupère le papier entête
+    // IMPORTANT : Récupération du papier entête
     let headerBase64 = null;
-    if (data.papier_entete) { headerBase64 = await fetchImageAsBase64(data.papier_entete); }
+    if (data.papier_entete) { 
+      console.log('🖼️ Papier entête détecté ! Téléchargement...');
+      headerBase64 = await fetchImageAsBase64(data.papier_entete); 
+    }
 
     const browser = await puppeteer.launch({
       headless: 'new',
@@ -231,14 +234,12 @@ app.post('/generate-pdf', async (req, res) => {
     });
 
     const page = await browser.newPage();
-    
-    await page.setContent(generateBodyContent(data), { waitUntil: 'load', timeout: 120000 });
+    await page.setContent(generateBodyContent(data), { waitUntil: 'load', timeout: 60000 });
 
     const pdfBuffer = await page.pdf({
       format: 'A4',
       printBackground: true,
       displayHeaderFooter: true,
-      // On passe l'info "headerBase64" aux templates
       headerTemplate: getHeaderTemplate(data, logoBase64, headerBase64),
       footerTemplate: getFooterTemplate(data, headerBase64),
       margin: {
@@ -247,7 +248,7 @@ app.post('/generate-pdf', async (req, res) => {
         left: '15mm',
         right: '15mm'
       },
-      timeout: 120000
+      timeout: 60000
     });
     
     await browser.close();
