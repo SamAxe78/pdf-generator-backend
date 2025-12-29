@@ -1,3 +1,4 @@
+console.log('📥 papier_entete reçu:', data.papier_entete);
 const express = require('express');
 const puppeteer = require('puppeteer');
 const cors = require('cors');
