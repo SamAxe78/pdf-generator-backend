@@ -37,7 +37,7 @@ const generateBodyContent = (data) => {
       
       :root { --primary: #3b82f6; --light-bg: #f8fafc; }
 
-      /* Si papier entête personnalisé, on descend un peu plus le contenu pour ne pas chevaucher l'en-tête */
+      /* Si papier entête personnalisé, on descend un peu plus le contenu */
       ${data.papier_entete ? 'body { padding-top: 20px; }' : ''}
 
       .client-section { display: flex; justify-content: flex-end; margin-bottom: 40px; }
@@ -130,7 +130,7 @@ const getHeaderTemplate = (data, logoBase64, headerBase64) => {
       <style>
         .header-container {
           width: 100%; height: 100%; padding: 0; margin: 0;
-          padding-right: 15mm; /* Marge pour le texte à droite */
+          padding-right: 15mm; 
           box-sizing: border-box;
           display: flex; justify-content: flex-end; align-items: center;
           font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -142,13 +142,12 @@ const getHeaderTemplate = (data, logoBase64, headerBase64) => {
           background-position: center;
           background-repeat: no-repeat;
         }
-        /* On affiche juste le N° devis proprement */
         .doc-info { 
           text-align: right; 
           background: rgba(255,255,255,0.8); 
           padding: 8px 12px; 
           border-radius: 6px; 
-          margin-top: 2cm; /* Descendre un peu pour ne pas être tout en haut */
+          margin-top: 2cm;
         }
         .doc-title { font-size: 24px; font-weight: bold; color: #3b82f6; margin: 0; line-height: 1; }
         .doc-meta { font-size: 11px; margin-top: 4px; color: #333; font-weight: bold; }
