@@ -216,7 +216,7 @@ const getFooterTemplate = (data, headerBase64) => {
 app.post('/generate-pdf', async (req, res) => {
   try {
     console.log('📲 Nouvelle demande PDF...');
-    console.log('📥 papier_entete reçu:', data.papier_entete);
+    console.log('📥 papier_entete reçu:', req.body.papier_entete);
     const data = req.body;
 
     let logoBase64 = null;
