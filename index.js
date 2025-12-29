@@ -1,4 +1,3 @@
-console.log('📥 papier_entete reçu:', data.papier_entete);
 const express = require('express');
 const puppeteer = require('puppeteer');
 const cors = require('cors');
@@ -217,6 +216,7 @@ const getFooterTemplate = (data, headerBase64) => {
 app.post('/generate-pdf', async (req, res) => {
   try {
     console.log('📲 Nouvelle demande PDF...');
+    console.log('📥 papier_entete reçu:', data.papier_entete);
     const data = req.body;
 
     let logoBase64 = null;
