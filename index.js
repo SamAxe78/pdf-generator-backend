@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(bodyParser.json({ limit: '50mb' }));
 
-// Route d'accueil pour vérifier que le serveur tourne
+// Route d'accueil
 app.get('/', (req, res) => {
   res.send('✅ Serveur PDF BatiProAI en ligne !');
 });
@@ -26,7 +26,7 @@ async function fetchImageAsBase64(url) {
   }
 }
 
-// 1. CORPS DU DOCUMENT
+// 1. CORPS DU DOCUMENT (Modifié pour la transparence)
 const generateBodyContent = (data) => {
   const formatPrice = (p) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(p || 0);
   const total_ht = data.total_ht || 0;
@@ -38,22 +38,53 @@ const generateBodyContent = (data) => {
   <html>
   <head>
     <style>
-      body { margin: 0; padding: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 11px; color: #333; -webkit-print-color-adjust: exact; padding-top: 10px; }
+      /* MODIFICATION ICI : Gestion du fond transparent */
+      html, body { 
+        margin: 0; 
+        padding: 0; 
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
+        font-size: 11px; 
+        color: #333; 
+        -webkit-print-color-adjust: exact; 
+        
+        /* Si papier entête, fond transparent pour voir l'image. Sinon blanc. */
+        background-color: ${data.papier_entete ? 'transparent !important' : 'white'};
+      }
+
+      /* On ajoute un padding en haut si papier entête */
+      body { padding-top: ${data.papier_entete ? '20px' : '10px'}; }
+
       :root { --primary: #3b82f6; --light-bg: #f8fafc; }
       
-      /* Si papier entête, on pousse le contenu vers le bas */
-      ${data.papier_entete ? 'body { padding-top: 20px; }' : ''}
-
       .client-section { display: flex; justify-content: flex-end; margin-bottom: 40px; }
-      .client-box { width: 45%; background: var(--light-bg); padding: 15px; border-radius: 6px; border-left: 4px solid var(--primary); }
+      
+      /* AJOUT : Fond semi-transparent pour la lisibilité sur l'image */
+      .client-box { 
+        width: 45%; 
+        background: rgba(248, 250, 252, 0.95); /* Légèrement transparent */
+        padding: 15px; 
+        border-radius: 6px; 
+        border-left: 4px solid var(--primary); 
+      }
+      
       .client-label { color: var(--primary); font-weight: bold; font-size: 10px; text-transform: uppercase; margin-bottom: 5px; }
       .client-name { font-weight: bold; font-size: 13px; margin-bottom: 3px; color: #1e3a8a; }
       .client-details { font-size: 11px; line-height: 1.4; color: #444; }
 
-      table { width: 100%; border-collapse: collapse; margin-bottom: 30px; margin-top: 20px; }
+      /* AJOUT : Fond semi-transparent pour le tableau */
+      table { 
+        width: 100%; 
+        border-collapse: collapse; 
+        margin-bottom: 30px; 
+        margin-top: 20px; 
+        background: rgba(255, 255, 255, 0.9); 
+      }
+      
       th { background: var(--primary); color: white; padding: 10px; text-align: left; font-size: 10px; text-transform: uppercase; font-weight: bold; }
       td { padding: 12px 10px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
-      tr:nth-child(even) td { background-color: #f9fafb; } 
+      
+      /* Ajustement pour la transparence des lignes paires */
+      tr:nth-child(even) td { background-color: rgba(249, 250, 251, 0.8); } 
       
       .col-desc { width: 45%; }
       .col-unit { width: 10%; text-align: center; }
@@ -62,7 +93,15 @@ const generateBodyContent = (data) => {
       .col-total { text-align: right; width: 20%; font-weight: bold; }
 
       .totals-section { display: flex; justify-content: flex-end; page-break-inside: avoid; }
-      .totals-box { width: 45%; }
+      
+      /* AJOUT : Fond pour le bloc total */
+      .totals-box { 
+        width: 45%; 
+        background: rgba(255, 255, 255, 0.9); 
+        padding: 10px; 
+        border-radius: 4px; 
+      }
+      
       .total-row { display: flex; justify-content: space-between; padding: 8px 10px; background: var(--light-bg); margin-bottom: 2px; border-radius: 4px; font-weight: bold; color: #555; }
       .total-row.final { background: var(--primary); color: white; font-size: 14px; margin-top: 5px; }
     </style>
@@ -114,7 +153,7 @@ const generateBodyContent = (data) => {
     </div>
 
     ${data.conditions_generales ? `
-      <div style="margin-top: 30px; font-size: 10px; color: #666; page-break-inside: avoid;">
+      <div style="margin-top: 30px; font-size: 10px; color: #666; page-break-inside: avoid; background: rgba(255,255,255,0.8); padding: 10px; border-radius: 4px;">
         <strong>Conditions :</strong><br>${data.conditions_generales}
       </div>
     ` : ''}
@@ -128,7 +167,6 @@ const getHeaderTemplate = (data, logoBase64, headerBase64) => {
   const formatDate = (d) => new Date(d).toLocaleDateString('fr-FR');
   
   // --- CAS 1 : PAPIER ENTÊTE PRÉSENT ---
-  // C'est ici que ça se joue ! Si headerBase64 existe, on met l'image et on cache le reste.
   if (headerBase64) {
     return `
       <style>
@@ -140,7 +178,6 @@ const getHeaderTemplate = (data, logoBase64, headerBase64) => {
           font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
           -webkit-print-color-adjust: exact;
           
-          /* L'image de fond remplit tout */
           background-image: url('${headerBase64}');
           background-size: cover;
           background-position: center;
@@ -216,13 +253,14 @@ const getFooterTemplate = (data, headerBase64) => {
 app.post('/generate-pdf', async (req, res) => {
   try {
     console.log('📲 Nouvelle demande PDF...');
-    console.log('📥 papier_entete reçu:', req.body.papier_entete);
+    // Logs pour débugger
+    console.log('📥 papier_entete reçu:', req.body.papier_entete ? 'OUI (URL présente)' : 'NON (null/undefined)');
+    
     const data = req.body;
 
     let logoBase64 = null;
     if (data.user_logo) { logoBase64 = await fetchImageAsBase64(data.user_logo); }
 
-    // IMPORTANT : Récupération du papier entête
     let headerBase64 = null;
     if (data.papier_entete) { 
       console.log('🖼️ Papier entête détecté ! Téléchargement...');
