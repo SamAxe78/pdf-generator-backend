@@ -4,14 +4,11 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 
 const app = express();
-// IMPORTANT : Render nous donne un port via process.env.PORT, sinon on utilise 3000 en local
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
-// On augmente la limite pour accepter les grosses images (logos)
 app.use(bodyParser.json({ limit: '50mb' }));
 
-// --- FONCTION UTILITAIRE : Convertir image URL en Base64 ---
 async function fetchImageAsBase64(url) {
   if (!url) return null;
   try {
@@ -24,7 +21,7 @@ async function fetchImageAsBase64(url) {
   }
 }
 
-// --- 1. LE CORPS DU DOCUMENT (HTML) ---
+// 1. CORPS DU DOCUMENT
 const generateBodyContent = (data) => {
   const formatPrice = (p) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(p || 0);
   const total_ht = data.total_ht || 0;
@@ -36,72 +33,34 @@ const generateBodyContent = (data) => {
   <html>
   <head>
     <style>
-      /* RESET & POLICE */
-      body { 
-        margin: 0; 
-        padding: 0; 
-        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
-        font-size: 11px; 
-        color: #333; 
-        -webkit-print-color-adjust: exact; 
-        padding-top: 10px; 
-      }
+      body { margin: 0; padding: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 11px; color: #333; -webkit-print-color-adjust: exact; padding-top: 10px; }
       
-      /* COULEURS */
       :root { --primary: #3b82f6; --light-bg: #f8fafc; }
 
-      /* BOITE CLIENT */
+      /* Si papier entête personnalisé, on descend un peu plus le contenu pour ne pas chevaucher l'en-tête */
+      ${data.papier_entete ? 'body { padding-top: 20px; }' : ''}
+
       .client-section { display: flex; justify-content: flex-end; margin-bottom: 40px; }
-      .client-box { 
-        width: 45%; 
-        background: var(--light-bg); 
-        padding: 15px; 
-        border-radius: 6px; 
-        border-left: 4px solid var(--primary); 
-      }
+      .client-box { width: 45%; background: var(--light-bg); padding: 15px; border-radius: 6px; border-left: 4px solid var(--primary); }
       .client-label { color: var(--primary); font-weight: bold; font-size: 10px; text-transform: uppercase; margin-bottom: 5px; }
       .client-name { font-weight: bold; font-size: 13px; margin-bottom: 3px; color: #1e3a8a; }
       .client-details { font-size: 11px; line-height: 1.4; color: #444; }
 
-      /* TABLEAU */
       table { width: 100%; border-collapse: collapse; margin-bottom: 30px; margin-top: 20px; }
-      th { 
-        background: var(--primary); 
-        color: white; 
-        padding: 10px; 
-        text-align: left; 
-        font-size: 10px; 
-        text-transform: uppercase; 
-        font-weight: bold; 
-      }
+      th { background: var(--primary); color: white; padding: 10px; text-align: left; font-size: 10px; text-transform: uppercase; font-weight: bold; }
       td { padding: 12px 10px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
       tr:nth-child(even) td { background-color: #f9fafb; } 
       
-      /* Colonnes ajustées pour inclure l'unité */
       .col-desc { width: 45%; }
       .col-unit { width: 10%; text-align: center; }
       .col-qty { width: 10%; text-align: center; }
       .col-price { text-align: right; width: 15%; }
       .col-total { text-align: right; width: 20%; font-weight: bold; }
 
-      /* TOTAUX */
       .totals-section { display: flex; justify-content: flex-end; page-break-inside: avoid; }
       .totals-box { width: 45%; }
-      .total-row { 
-        display: flex; justify-content: space-between; 
-        padding: 8px 10px; 
-        background: var(--light-bg); 
-        margin-bottom: 2px; 
-        border-radius: 4px; 
-        font-weight: bold; 
-        color: #555; 
-      }
-      .total-row.final { 
-        background: var(--primary); 
-        color: white; 
-        font-size: 14px; 
-        margin-top: 5px; 
-      }
+      .total-row { display: flex; justify-content: space-between; padding: 8px 10px; background: var(--light-bg); margin-bottom: 2px; border-radius: 4px; font-weight: bold; color: #555; }
+      .total-row.final { background: var(--primary); color: white; font-size: 14px; margin-top: 5px; }
     </style>
   </head>
   <body>
@@ -121,7 +80,8 @@ const generateBodyContent = (data) => {
       <thead>
         <tr>
           <th class="col-desc">Description</th>
-          <th class="col-unit">Unité</th> <th class="col-qty">Qté</th>
+          <th class="col-unit">Unité</th>
+          <th class="col-qty">Qté</th>
           <th class="col-price">Prix U. HT</th>
           <th class="col-total">Total HT</th>
         </tr>
@@ -133,7 +93,8 @@ const generateBodyContent = (data) => {
               <div style="font-weight:bold; color:#333;">${p.libelle.split('\n')[0]}</div>
               <div style="font-size:10px; color:#666; margin-top:2px;">${p.libelle.split('\n').slice(1).join('<br>')}</div>
             </td>
-            <td class="col-unit">${p.unite || '-'}</td> <td class="col-qty">${p.quantite}</td>
+            <td class="col-unit">${p.unite || '-'}</td>
+            <td class="col-qty">${p.quantite}</td>
             <td class="col-price">${formatPrice(p.prix_unitaire)}</td>
             <td class="col-total">${formatPrice(p.total_ht)}</td>
           </tr>
@@ -159,35 +120,62 @@ const generateBodyContent = (data) => {
   `;
 };
 
-// --- 2. LE TEMPLATE HEADER (En-tête fixe) ---
-const getHeaderTemplate = (data, logoBase64) => {
+// 2. HEADER TEMPLATE (En-tête)
+const getHeaderTemplate = (data, logoBase64, headerBase64) => {
   const formatDate = (d) => new Date(d).toLocaleDateString('fr-FR');
   
+  // --- CAS 1 : Papier entête personnalisé ---
+  if (headerBase64) {
+    return `
+      <style>
+        .header-container {
+          width: 100%; height: 100%; padding: 0; margin: 0;
+          padding-right: 15mm; /* Marge pour le texte à droite */
+          box-sizing: border-box;
+          display: flex; justify-content: flex-end; align-items: center;
+          font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+          -webkit-print-color-adjust: exact;
+          
+          /* L'image de fond remplit tout */
+          background-image: url('${headerBase64}');
+          background-size: cover;
+          background-position: center;
+          background-repeat: no-repeat;
+        }
+        /* On affiche juste le N° devis proprement */
+        .doc-info { 
+          text-align: right; 
+          background: rgba(255,255,255,0.8); 
+          padding: 8px 12px; 
+          border-radius: 6px; 
+          margin-top: 2cm; /* Descendre un peu pour ne pas être tout en haut */
+        }
+        .doc-title { font-size: 24px; font-weight: bold; color: #3b82f6; margin: 0; line-height: 1; }
+        .doc-meta { font-size: 11px; margin-top: 4px; color: #333; font-weight: bold; }
+      </style>
+      <div class="header-container">
+        <div class="doc-info">
+          <div class="doc-title">${data.type_document}</div>
+          <div class="doc-meta">N° ${data.numero}<br>${formatDate(data.date_creation)}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  // --- CAS 2 : Standard (Logo + Texte) ---
   const logoHtml = logoBase64
     ? `<img src="${logoBase64}" style="height: 2cm; max-width: 300px; object-fit: contain;" />`
     : `<h1 style="color:#3b82f6; margin:0; font-size:22px;">${data.user_entreprise || 'Mon Entreprise'}</h1>`;
 
   return `
     <style>
-      .header-container {
-        width: 100%;
-        height: 100%;
-        padding: 0 15mm;
-        box-sizing: border-box;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-        -webkit-print-color-adjust: exact;
-        background: white;
-      }
+      .header-container { width: 100%; height: 100%; padding: 0 15mm; box-sizing: border-box; display: flex; justify-content: space-between; align-items: center; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-print-color-adjust: exact; background: white; }
       .col-left { display: flex; flex-direction: column; justify-content: center; }
       .company-details { font-size: 9px; color: #555; line-height: 1.3; margin-top: 5px; }
       .col-right { text-align: right; }
       .doc-title { font-size: 28px; font-weight: bold; color: #3b82f6; text-transform: uppercase; margin: 0; line-height: 1; }
       .doc-meta { font-size: 10px; margin-top: 5px; color: #444; }
     </style>
-    
     <div class="header-container">
       <div class="col-left">
         ${logoHtml}
@@ -200,101 +188,78 @@ const getHeaderTemplate = (data, logoBase64) => {
       </div>
       <div class="col-right">
         <div class="doc-title">${data.type_document || 'DEVIS'}</div>
-        <div class="doc-meta">
-          <strong>N° :</strong> ${data.numero || 'PROVISOIRE'}<br>
-          <strong>Date :</strong> ${formatDate(data.date_creation)}
-        </div>
+        <div class="doc-meta"><strong>N° :</strong> ${data.numero || 'PROVISOIRE'}<br><strong>Date :</strong> ${formatDate(data.date_creation)}</div>
       </div>
     </div>
   `;
 };
 
-// --- 3. LE TEMPLATE FOOTER (Pied de page fixe) ---
-const getFooterTemplate = (data) => {
+// 3. FOOTER TEMPLATE (Pied de page)
+const getFooterTemplate = (data, headerBase64) => {
+  // SI PAPIER ENTÊTE PRÉSENT : On ne met PAS de pied de page texte (car déjà sur l'image)
+  if (headerBase64) {
+    return `<div style="width: 100%; font-size: 8px; text-align: center; color: #999;">Page <span class="pageNumber"></span>/<span class="totalPages"></span></div>`;
+  }
+
+  // SINON : Pied de page standard
   return `
     <style>
-      .footer-container {
-        width: 100%;
-        font-size: 8px;
-        text-align: center;
-        color: #94a3b8;
-        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-        border-top: 1px solid #e5e7eb;
-        padding-top: 8px;
-        margin: 0 15mm;
-        -webkit-print-color-adjust: exact;
-      }
+      .footer-container { width: 100%; font-size: 8px; text-align: center; color: #94a3b8; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; border-top: 1px solid #e5e7eb; padding-top: 8px; margin: 0 15mm; -webkit-print-color-adjust: exact; }
     </style>
     <div class="footer-container">
-      ${data.user_entreprise} - ${data.user_adresse} ${data.user_cp} ${data.user_ville} - 
-      Tél: ${data.user_phone || ''} - Email: ${data.user_email || ''}<br>
+      ${data.user_entreprise} - ${data.user_adresse} ${data.user_cp} ${data.user_ville} - Tél: ${data.user_phone || ''} - Email: ${data.user_email || ''}<br>
       SIRET : ${data.user_siret} - Document généré par BatiProAI
     </div>
   `;
 };
 
-// --- ROUTE API PRINCIPALE ---
+// --- ROUTE API ---
 app.post('/generate-pdf', async (req, res) => {
   try {
-    console.log('📲 Nouvelle demande de PDF reçue...');
+    console.log('📲 Nouvelle demande PDF...');
     const data = req.body;
 
     let logoBase64 = null;
-    if (data.user_logo) {
-      logoBase64 = await fetchImageAsBase64(data.user_logo);
-    }
+    if (data.user_logo) { logoBase64 = await fetchImageAsBase64(data.user_logo); }
 
-    // Lancement de Chrome avec les options "Safe Mode" pour Render
+    // On récupère le papier entête
+    let headerBase64 = null;
+    if (data.papier_entete) { headerBase64 = await fetchImageAsBase64(data.papier_entete); }
+
     const browser = await puppeteer.launch({
       headless: 'new',
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--single-process'
-      ]
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--single-process']
     });
 
     const page = await browser.newPage();
     
-    // On utilise 'load' pour éviter le blocage
-    await page.setContent(generateBodyContent(data), { 
-        waitUntil: 'load',
-        timeout: 120000 
-    });
+    await page.setContent(generateBodyContent(data), { waitUntil: 'load', timeout: 120000 });
 
-    // Génération du PDF
     const pdfBuffer = await page.pdf({
       format: 'A4',
       printBackground: true,
       displayHeaderFooter: true,
-      headerTemplate: getHeaderTemplate(data, logoBase64),
-      footerTemplate: getFooterTemplate(data),
+      // On passe l'info "headerBase64" aux templates
+      headerTemplate: getHeaderTemplate(data, logoBase64, headerBase64),
+      footerTemplate: getFooterTemplate(data, headerBase64),
       margin: {
         top: '50mm',
         bottom: '20mm',
         left: '15mm',
         right: '15mm'
       },
-      timeout: 120000   
+      timeout: 120000
     });
     
     await browser.close();
-    console.log('✅ PDF généré avec succès et envoyé !');
-    
-    res.set({ 
-      'Content-Type': 'application/pdf', 
-      'Content-Length': pdfBuffer.length 
-    });
+    console.log('✅ PDF envoyé !');
+    res.set({ 'Content-Type': 'application/pdf', 'Content-Length': pdfBuffer.length });
     res.send(pdfBuffer);
 
   } catch (error) {
     console.error('❌ ERREUR SERVEUR :', error);
-    res.status(500).send('Erreur lors de la génération du PDF : ' + error.message);
+    res.status(500).send('Erreur : ' + error.message);
   }
 });
 
-// --- Lancement du serveur ---
-app.listen(PORT, () => {
-    console.log(`🚀 Serveur PDF lancé sur le port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`🚀 Serveur PDF lancé sur le port ${PORT}`));
