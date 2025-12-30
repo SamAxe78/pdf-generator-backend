@@ -102,7 +102,7 @@ const generateBodyContent = (data, logoBase64, headerBase64) => {
       .header-overlay { 
          text-align: right; 
          position: absolute;
-         top: 55mm; /* Ajustez selon votre design */
+         top: 40mm; /* Ajustez selon votre design */
          right: 15mm;
          background: rgba(255,255,255,0.7);
          padding: 5px;
